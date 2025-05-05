@@ -5,7 +5,7 @@ import json
 import os
 from webserver import trigger_refresh
 from discord.ext import commands
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 
 '''Setup'''
@@ -29,6 +29,7 @@ POINTS_PER_GAME_TYPE = {
     3: [2, 1, 0],
     4: [6, 2, 0, -2]
 }
+DEFAULT_PFP = "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d8014ea898f3a4b2156c_Symbol.svg"
 MIN_PLAYER_CT = 3
 MAX_PLAYER_CT = 4
 # Setup bot
@@ -60,7 +61,7 @@ def add_player(player):
     if player.id not in stats:
         stats[player.id] = {
             "nickname": player.display_name or player.name,
-            "avatar_url": player.avatar.url if player.avatar else "",
+            "avatar_url": player.avatar.url if player.avatar else DEFAULT_PFP,
             "3": {"points": 0, "games_played": 0},
             "4": {"points": 0, "games_played": 0}
     }
@@ -239,16 +240,24 @@ async def leaderboard(interaction: discord.Interaction):
 
     load_stats()
 
-    public_url = os.getenv("NGROK_URL")
+    public_url = dotenv_values(".env").get("NGROK_URL")
+    
+
 
     # Send player stats after deferring
     await send_player_stats(interaction, stats, sort_by="total_gp")
 
     # Send the leaderboard URL as a follow-up
-    await interaction.followup.send(
-        f"🌐 You can also view the leaderboard here: {public_url}",
-        ephemeral=True
-    )
+    if public_url is not "":
+        await interaction.followup.send(
+            f"🌐 You can also view the leaderboard here: {public_url}",
+            ephemeral=True
+        )
+    else:
+        await interaction.followup.send(
+            "🌐 The web server is offline right now",
+            ephemeral=True
+        )
     
 
 bot.run(TOKEN, log_handler = handler)

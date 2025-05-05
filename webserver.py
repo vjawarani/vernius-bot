@@ -91,6 +91,7 @@ def start_server_and_tunnel():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
+        set_key(".env", "NGROK_URL", "")
         print("Shutting down...")
 
 # --- Main Entry ---
