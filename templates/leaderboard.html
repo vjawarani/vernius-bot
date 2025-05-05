@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Leaderboard</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>3P Points</th>
+                <th>3P PPG</th>
+                <th>3P Games Played</th>
+                <th>4P Points</th>
+                <th>4P PPG</th>
+                <th>4P Games Played</th>
+                <th>Total Games Played</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in stats %}
+            <tr>
+                <td>{{ player.name }}</td>
+                <td>{{ player['3p_pts'] }}</td>
+                <td>{{ player['3p_ppg'] }}</td>
+                <td>{{ player['3p_gp'] }}</td>
+                <td>{{ player['4p_pts'] }}</td>
+                <td>{{ player['4p_ppg'] }}</td>
+                <td>{{ player['4p_gp'] }}</td>
+                <td>{{ player['total_gp'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

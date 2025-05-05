@@ -1,0 +1,5 @@
+.env
+*.log
+player_stats.json
+./vernius
+__pycache__
