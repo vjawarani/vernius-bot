@@ -20,3 +20,8 @@ GUILD_ID=<token>
 NGROK_AUTHTOKEN=<token>
 NGROK_URL=""
 ```
+
+## Run
+
+First run ```webserver.py```.
+Then run ```main.py```.
