@@ -1,66 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaderboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f9;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dune Leaderboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background-color: #2D1A23;
+      color: #FFFFFF;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #A48660;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #9C9B95;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      color: #2D1A23;
+    }
+
+    th {
+      background-color: #A48660;
+    }
+
+    tr:nth-child(even) {
+      background-color: #EAEAEA;
+    }
+
+    .avatar-name {
+      display: flex;
+      align-items: center;
+    }
+
+    .avatar-name img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .crown {
+      margin-left: 5px;
+    }
+  </style>
 </head>
 <body>
+  <h1>Dune Leaderboard</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>3P Points</th>
+        <th>3P Games</th>
+        <th>3P PPG</th>
+        <th>4P Points</th>
+        <th>4P Games</th>
+        <th>4P PPG</th>
+        <th>Total GP</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard-body"></tbody>
+  </table>
 
-    <h1>Leaderboard</h1>
+  <script>
+    async function fetchData() {
+      const res = await fetch("/api/leaderboard");
+      const data = await res.json();
+      const tbody = document.getElementById("leaderboard-body");
+      tbody.innerHTML = "";
 
-    <table>
-        <thead>
-            <tr>
-                <th>Player</th>
-                <th>3P Points</th>
-                <th>3P PPG</th>
-                <th>3P Games Played</th>
-                <th>4P Points</th>
-                <th>4P PPG</th>
-                <th>4P Games Played</th>
-                <th>Total Games Played</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in stats %}
-            <tr>
-                <td>{{ player.name }}</td>
-                <td>{{ player['3p_pts'] }}</td>
-                <td>{{ player['3p_ppg'] }}</td>
-                <td>{{ player['3p_gp'] }}</td>
-                <td>{{ player['4p_pts'] }}</td>
-                <td>{{ player['4p_ppg'] }}</td>
-                <td>{{ player['4p_gp'] }}</td>
-                <td>{{ player['total_gp'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+      // Extract column-wise max values
+      const colIndices = [3, 4, 5, 6, 7, 8]; // 3P points → total GP
+      const maxes = Array(colIndices.length).fill(-Infinity);
 
+      data.forEach(row => {
+        colIndices.forEach((i, idx) => {
+          const val = parseFloat(row[i]);
+          if (!isNaN(val) && val > maxes[idx]) {
+            maxes[idx] = val;
+          }
+        });
+      });
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach((val, i) => {
+          const td = document.createElement("td");
+
+          if (i === 1) {
+            // Nickname with avatar
+            td.innerHTML = `
+              <div class="avatar-name">
+                <img src="${row[2]}" alt="avatar" />
+                <span>${val}</span>
+              </div>`;
+          } else if (i > 2) {
+            // Compare with max values
+            const maxIndex = colIndices.indexOf(i);
+            td.textContent = val;
+            if (maxIndex >= 0 && parseFloat(val) === maxes[maxIndex]) {
+              td.innerHTML += ' <span class="crown">👑</span>';
+            }
+          }
+
+          if (i !== 2) tr.appendChild(td); // skip avatar URL cell
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    setInterval(fetchData, 3000); // Auto-refresh every 3s
+    fetchData(); // Initial load
+  </script>
 </body>
 </html>

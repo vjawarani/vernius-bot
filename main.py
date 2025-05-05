@@ -3,7 +3,7 @@ import time
 import logging
 import json
 import os
-import webserver
+from webserver import trigger_refresh
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -56,6 +56,16 @@ def load_stats():
         stats = {}
     return stats
 
+def add_player(player):
+    if player.id not in stats:
+        stats[player.id] = {
+            "nickname": player.display_name or player.name,
+            "avatar_url": player.avatar.url if player.avatar else "",
+            "3": {"points": 0, "games_played": 0},
+            "4": {"points": 0, "games_played": 0}
+    }
+    logger.debug(f"add_played - added {player.name}")
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
@@ -94,18 +104,17 @@ async def addgame(
     ppgt = POINTS_PER_GAME_TYPE[player_count]
     
     for idx, player in enumerate(players):
-        if player.id not in stats:
-            stats[player.id] = { 
-                                3: {'points': 0, 'games_played': 0},
-                                4: {'points': 0, 'games_played': 0}
-                                }
+
+        add_player(player=player) # if player is not already present in stats
 
         # Assign points based on position
-        stats[player.id][player_count]['points'] += ppgt[idx]
-        stats[player.id][player_count]['games_played'] += 1
+        stats[player.id][str(player_count)]['points'] += ppgt[idx]
+        stats[player.id][str(player_count)]['games_played'] += 1
 
     save_stats()
-    logger.debug("addgame - saved stats")
+    logger.debug("/addgame - saved stats")
+    trigger_refresh()
+    logger.debug("/addgame - trigger refresh")
 
     await interaction.response.send_message(
         f"Game recorded for {player_count} players. Use /leaderboard to see updated leaderboard."
@@ -121,27 +130,31 @@ async def edit(
     points: int,
     game_count: int
 ):
-    # Apply player_count range check because commands.Range[] is not a usable default parameter for slash / tree commands.
+    await interaction.response.defer(thinking=True)  # Defer immediately
+
     if player_count < MIN_PLAYER_CT or player_count > MAX_PLAYER_CT:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"Player count must be between {MIN_PLAYER_CT} and {MAX_PLAYER_CT}.",
             ephemeral=True
         )
         return
 
     load_stats()
-    if player.id not in stats:
-        stats[player.id] = { 
-                            3: {'points': 0, 'games_played': 0},
-                            4: {'points': 0, 'games_played': 0}
-                            }
-
-    stats[player.id][player_count]['points'] = points
-    stats[player.id][player_count]['games_played'] = game_count
+    add_player(player=player)  # Add if not present
+    stats[player.id][str(player_count)]['points'] = points
+    stats[player.id][str(player_count)]['games_played'] = game_count
     save_stats()
-    await interaction.response.send_message(
+
+    try:
+        trigger_refresh()
+        logger.debug("/edit - trigger refresh")
+    except Exception as e:
+        logger.exception(f"Failed to trigger refresh: {e}")
+
+    await interaction.followup.send(
         f"{player.mention}'s score for {player_count}-player games has been updated to {points} points in {game_count} games played."
     )
+
 
 ''' Format Player Stats for Leaderboard '''
 async def send_player_stats(interaction: discord.Interaction, stats: dict, sort_by: str = "total_gp"):
@@ -218,7 +231,7 @@ async def send_player_stats(interaction: discord.Interaction, stats: dict, sort_
 
         embed.add_field(name="\u200b", value=stats_text, inline=False)
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 ''' Slash Command - Display Leaderboard '''
 @bot.tree.command(name="leaderboard", description="Display the current leaderboard.", guild=MY_GUILD)
@@ -226,8 +239,7 @@ async def leaderboard(interaction: discord.Interaction):
 
     load_stats()
 
-    # Start the web server in a thread
-    public_url = os.getenv("NGROK_URL")  # Starts the server in the background
+    public_url = os.getenv("NGROK_URL")
 
     # Send player stats after deferring
     await send_player_stats(interaction, stats, sort_by="total_gp")
