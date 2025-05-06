@@ -58,8 +58,9 @@ def load_stats():
     return stats
 
 def add_player(player):
-    if player.id not in stats:
-        stats[player.id] = {
+    pid = str(player.id)
+    if pid not in stats:
+        stats[pid] = {
             "nickname": player.display_name or player.name,
             "avatar_url": player.avatar.url if player.avatar else DEFAULT_PFP,
             "3": {"points": 0, "games_played": 0},
@@ -105,12 +106,12 @@ async def addgame(
     ppgt = POINTS_PER_GAME_TYPE[player_count]
     
     for idx, player in enumerate(players):
-
+        pid = str(player.id)
         add_player(player=player) # if player is not already present in stats
 
         # Assign points based on position
-        stats[player.id][str(player_count)]['points'] += ppgt[idx]
-        stats[player.id][str(player_count)]['games_played'] += 1
+        stats[pid][str(player_count)]['points'] += ppgt[idx]
+        stats[pid][str(player_count)]['games_played'] += 1
 
     save_stats()
     logger.debug("/addgame - saved stats")
@@ -142,8 +143,9 @@ async def edit(
 
     load_stats()
     add_player(player=player)  # Add if not present
-    stats[player.id][str(player_count)]['points'] = points
-    stats[player.id][str(player_count)]['games_played'] = game_count
+    pid = str(player.id)
+    stats[pid][str(player_count)]['points'] = points
+    stats[pid][str(player_count)]['games_played'] = game_count
     save_stats()
 
     try:
@@ -248,16 +250,14 @@ async def leaderboard(interaction: discord.Interaction):
     await send_player_stats(interaction, stats, sort_by="total_gp")
 
     # Send the leaderboard URL as a follow-up
-    if public_url is not "":
+    if public_url != "":
         await interaction.followup.send(
             f"🌐 You can also view the leaderboard here: {public_url}",
             ephemeral=True
         )
     else:
         await interaction.followup.send(
-            "🌐 The web server is offline right now",
-            ephemeral=True
-        )
+            "🌐 The web server is offline right now")
     
 
 bot.run(TOKEN, log_handler = handler)
